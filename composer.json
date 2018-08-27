@@ -15,10 +15,11 @@
         "reactivex/rxphp": "^2.0",
         "recoil/react": "^1.0",
         "recoil/recoil": "^1.0",
-        "wyrihaximus/recoil-queue-caller": "dev-master"
+        "wyrihaximus/recoil-queue-caller": "^2.1"
     },
     "require-dev": {
-        "api-clients/test-utilities": "^5.0"
+        "api-clients/test-utilities": "^5.0",
+        "wyrihaximus/ticking-promise": "^1.6"
     },
     "autoload": {
         "psr-4": {
