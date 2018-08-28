@@ -112,7 +112,7 @@ final class FiniteCallerTest extends TestCase
 
             foreach (['b', 'c', 'd', 'e'] as $i) {
                 $deferreds[$i] = new Deferred();
-                $calls[$i] = new  Call(function ($promise) {
+                $calls[$i] = new Call(function ($promise) {
                     yield $promise;
                 }, $deferreds[$i]->promise());
                 $stream->onNext($calls[$i]);
