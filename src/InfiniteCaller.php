@@ -41,7 +41,7 @@ final class InfiniteCaller implements QueueCallerInterface
     public function call(ObservableInterface $observable): State
     {
         try {
-            $observable->subscribe(function (Call $call) {
+            $observable->subscribe(function (Call $call): void {
                 try {
                     $this->delegateCall($call);
                 } catch (\Throwable $et) {
@@ -66,7 +66,7 @@ final class InfiniteCaller implements QueueCallerInterface
 
         $stream = new Subject();
         $caller = new QueueCaller($this->kernel);
-        $qcHash = spl_object_hash($caller);
+        $qcHash = \spl_object_hash($caller);
 
         $this->callers[$qcHash] = $caller;
         $this->callerStream[$qcHash] = $stream;
@@ -74,7 +74,7 @@ final class InfiniteCaller implements QueueCallerInterface
         /** @var DisposableInterface $disposeable */
         $disposeable = $this->callerState[$qcHash]->filter(function (int $state) {
             return $state === State::WAITING;
-        })->subscribe(function () use (&$disposeable, $stream, $call) {
+        })->subscribe(function () use (&$disposeable, $stream, $call): void {
             $stream->onNext($call);
             $disposeable->dispose();
         });

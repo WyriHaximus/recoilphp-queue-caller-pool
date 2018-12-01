@@ -12,14 +12,17 @@ use WyriHaximus\Recoil\Call;
 use WyriHaximus\Recoil\FiniteCaller;
 use WyriHaximus\Recoil\State;
 
+/**
+ * @internal
+ */
 final class FiniteCallerTest extends TestCase
 {
-    public function testConcurrencyOfOne()
+    public function testConcurrencyOfOne(): void
     {
         $finished = false;
         $loop = Factory::create();
         $kernel = ReactKernel::create($loop);
-        $kernel->setExceptionHandler(function ($error) {
+        $kernel->setExceptionHandler(function ($error): void {
             echo (string)$error;
         });
         $caller = new FiniteCaller($kernel, 1);
@@ -40,7 +43,7 @@ final class FiniteCallerTest extends TestCase
             self::assertSame(State::BUSY, $state->getState());
 
             $deferreds['a']->resolve(123);
-            yield new Promise(function ($resolve, $reject) use (&$calls) {
+            yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['a']->wait($resolve, $reject);
             });
             self::assertSame(State::WAITING, $state->getState());
@@ -60,13 +63,13 @@ final class FiniteCallerTest extends TestCase
             self::assertSame(State::BUSY, $state->getState());
 
             $deferreds['b']->resolve(123);
-            yield new Promise(function ($resolve, $reject) use (&$calls) {
+            yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['b']->wait($resolve, $reject);
             });
             self::assertSame(State::BUSY, $state->getState());
 
             $deferreds['c']->resolve(123);
-            yield new Promise(function ($resolve, $reject) use (&$calls) {
+            yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['c']->wait($resolve, $reject);
             });
             self::assertSame(State::WAITING, $state->getState());
@@ -79,12 +82,12 @@ final class FiniteCallerTest extends TestCase
         self::assertTrue($finished);
     }
 
-    public function testConcurrencyOfFive()
+    public function testConcurrencyOfFive(): void
     {
         $finished = false;
         $loop = Factory::create();
         $kernel = ReactKernel::create($loop);
-        $kernel->setExceptionHandler(function ($error) {
+        $kernel->setExceptionHandler(function ($error): void {
             echo (string)$error;
         });
         $caller = new FiniteCaller($kernel, 5);
@@ -105,7 +108,7 @@ final class FiniteCallerTest extends TestCase
             self::assertSame(State::WAITING, $state->getState());
 
             $deferreds['a']->resolve(123);
-            yield new Promise(function ($resolve, $reject) use (&$calls) {
+            yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['a']->wait($resolve, $reject);
             });
             self::assertSame(State::WAITING, $state->getState());
@@ -126,7 +129,7 @@ final class FiniteCallerTest extends TestCase
             self::assertSame(State::BUSY, $state->getState());
 
             $deferreds['b']->resolve(123);
-            yield new Promise(function ($resolve, $reject) use (&$calls) {
+            yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['b']->wait($resolve, $reject);
             });
             self::assertSame(State::WAITING, $state->getState());
