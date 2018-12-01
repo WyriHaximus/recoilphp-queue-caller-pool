@@ -12,6 +12,9 @@ use WyriHaximus\Recoil\Call;
 use WyriHaximus\Recoil\InfiniteCaller;
 use WyriHaximus\Recoil\State;
 
+/**
+ * @internal
+ */
 final class InfiniteCallerTest extends TestCase
 {
     public function testInfiniteConcurrency(): void
@@ -19,7 +22,7 @@ final class InfiniteCallerTest extends TestCase
         $finished = false;
         $loop = Factory::create();
         $kernel = ReactKernel::create($loop);
-        $kernel->setExceptionHandler(function ($error) {
+        $kernel->setExceptionHandler(function ($error): void {
             echo (string)$error;
         });
         $caller = new InfiniteCaller($kernel);
@@ -44,7 +47,7 @@ final class InfiniteCallerTest extends TestCase
                 $call = $calls[$i];
                 $deferred = $deferreds[$i];
                 $deferred->resolve(123);
-                yield new Promise(function ($resolve, $reject) use (&$call) {
+                yield new Promise(function ($resolve, $reject) use (&$call): void {
                     $call->wait($resolve, $reject);
                 });
                 unset($deferreds[$i]);

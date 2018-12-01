@@ -40,18 +40,18 @@ final class FiniteCaller implements QueueCallerInterface
         for ($i = 0; $i < $size; $i++) {
             $subject = new Subject();
             $caller = new QueueCaller($kernel);
-            $hash = spl_object_hash($caller);
+            $hash = \spl_object_hash($caller);
             $this->caller[$hash] = $caller;
             $this->callerStream[$hash] = $subject;
             $this->callerState[$hash] = $caller->call($subject);
             $this->callerState[$hash]->filter(function () {
-                return count($this->queue) > 0;
+                return \count($this->queue) > 0;
             })->filter(function (int $state) {
                 return $state === State::WAITING;
-            })->subscribe(function () use ($hash) {
-                $this->callerStream[$hash]->onNext(array_shift($this->queue));
+            })->subscribe(function () use ($hash): void {
+                $this->callerStream[$hash]->onNext(\array_shift($this->queue));
             });
-            $this->callerState[$hash]->subscribe(function () use ($hash) {
+            $this->callerState[$hash]->subscribe(function () use ($hash): void {
                 $this->callersBusy = \count(\array_filter($this->callerState, function (State $state) {
                     return $state->getState() === State::BUSY;
                 }));
@@ -69,7 +69,7 @@ final class FiniteCaller implements QueueCallerInterface
 
     public function call(ObservableInterface $observable): State
     {
-        $observable->subscribe(function (Call $call) {
+        $observable->subscribe(function (Call $call): void {
             $this->delegateCall($call);
         });
 
