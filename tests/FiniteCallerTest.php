@@ -27,7 +27,8 @@ final class FiniteCallerTest extends TestCase
         });
         $caller = new FiniteCaller($kernel, 1);
 
-        $kernel->execute(function () use ($caller, &$finished) {
+        $values = [];
+        $kernel->execute(function () use ($caller, &$finished, &$values) {
             yield;
             $deferreds = [];
             $calls = [];
@@ -43,7 +44,7 @@ final class FiniteCallerTest extends TestCase
             self::assertSame(State::BUSY, $state->getState());
 
             $deferreds['a']->resolve(123);
-            yield new Promise(function ($resolve, $reject) use (&$calls): void {
+            $values['a'] = yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['a']->wait($resolve, $reject);
             });
             self::assertSame(State::WAITING, $state->getState());
@@ -62,14 +63,14 @@ final class FiniteCallerTest extends TestCase
             $stream->onNext($calls['c']);
             self::assertSame(State::BUSY, $state->getState());
 
-            $deferreds['b']->resolve(123);
-            yield new Promise(function ($resolve, $reject) use (&$calls): void {
+            $deferreds['b']->resolve(456);
+            $values['b'] = yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['b']->wait($resolve, $reject);
             });
             self::assertSame(State::BUSY, $state->getState());
 
-            $deferreds['c']->resolve(123);
-            yield new Promise(function ($resolve, $reject) use (&$calls): void {
+            $deferreds['c']->resolve(789);
+            $values['c'] = yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['c']->wait($resolve, $reject);
             });
             self::assertSame(State::WAITING, $state->getState());
@@ -80,6 +81,14 @@ final class FiniteCallerTest extends TestCase
         $loop->run();
 
         self::assertTrue($finished);
+
+        /*self::assertSame([
+            'a' => 123,
+            'b' => 456,
+            'c' => 789,
+        ], $values);*/
+
+        //self::assertSame(0, \gc_collect_cycles());
     }
 
     public function testConcurrencyOfFive(): void
@@ -140,5 +149,6 @@ final class FiniteCallerTest extends TestCase
         $loop->run();
 
         self::assertTrue($finished);
+        //self::assertSame(0, \gc_collect_cycles());
     }
 }

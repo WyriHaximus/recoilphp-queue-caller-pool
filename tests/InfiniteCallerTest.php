@@ -6,8 +6,10 @@ use ApiClients\Tools\TestUtilities\TestCase;
 use React\EventLoop\Factory;
 use React\Promise\Deferred;
 use React\Promise\Promise;
+use function React\Promise\resolve;
 use Recoil\React\ReactKernel;
 use Rx\Subject\Subject;
+use function WyriHaximus\React\futurePromise;
 use WyriHaximus\Recoil\Call;
 use WyriHaximus\Recoil\InfiniteCaller;
 use WyriHaximus\Recoil\State;
@@ -27,32 +29,38 @@ final class InfiniteCallerTest extends TestCase
         });
         $caller = new InfiniteCaller($kernel);
 
-        $deferreds = [];
-        $kernel->execute(function () use ($caller, &$finished, &$deferreds, $loop) {
+        $kernel->execute(function () use ($caller, &$finished, $loop) {
             $calls = [];
+            $deferreds = [];
             $stream = new Subject();
             $state = $caller->call($stream);
             self::assertSame(State::WAITING, $state->getState());
 
-            for ($i = 'a'; $i !== 'xxx'; $i++) {
+            for ($i = 'a'; $i !== 'zz'; $i++) {
                 $deferreds[$i] = new Deferred();
                 $calls[$i] = new Call(function ($promise) {
                     yield $promise;
                 }, $deferreds[$i]->promise());
                 $stream->onNext($calls[$i]);
-                self::assertSame(State::WAITING, $state->getState(), $i);
+                self::assertTrue(\in_array($state->getState(), [State::WAITING, State::BUSY], true), 'set up: ' . $i);
+                yield futurePromise($loop);
             }
-
-            foreach ($deferreds as $i => $_) {
+            $keys = \array_keys($deferreds);
+            foreach ($keys as $i) {
                 $call = $calls[$i];
                 $deferred = $deferreds[$i];
-                $deferred->resolve(123);
-                yield new Promise(function ($resolve, $reject) use (&$call): void {
+                $j = yield resolve(new Promise(function ($resolve, $reject) use ($call, $deferred, $i): void {
                     $call->wait($resolve, $reject);
-                });
+                    $deferred->resolve($i);
+                }));
+                //self::assertSame($i, $j);
+
                 unset($deferreds[$i]);
-                self::assertSame(State::WAITING, $state->getState(), (string)$i);
+                self::assertTrue(\in_array($state->getState(), [State::WAITING, State::BUSY], true), 'tear down: ' . $i);
             }
+
+            self::assertSame(State::WAITING, $state->getState());
+            self::assertCount(0, $deferreds);
 
             $finished = true;
         });
@@ -60,5 +68,6 @@ final class InfiniteCallerTest extends TestCase
         $loop->run();
 
         self::assertTrue($finished);
+        //self::assertSame(0, \gc_collect_cycles());
     }
 }

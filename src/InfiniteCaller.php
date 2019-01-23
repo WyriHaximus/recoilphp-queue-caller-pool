@@ -3,7 +3,6 @@
 namespace WyriHaximus\Recoil;
 
 use Recoil\Kernel;
-use Rx\DisposableInterface;
 use Rx\ObservableInterface;
 use Rx\Subject\Subject;
 
@@ -17,9 +16,6 @@ final class InfiniteCaller implements QueueCallerInterface
 
     /** @var QueueCallerInterface[] */
     private $callers = [];
-
-    /** @var string[] */
-    private $readyCallers = [];
 
     /** @var State[] */
     private $callerState = [];
@@ -36,47 +32,69 @@ final class InfiniteCaller implements QueueCallerInterface
 
         $this->state = new State();
         $this->state->onNext(State::WAITING);
+        $this->setUpCaller();
     }
 
     public function call(ObservableInterface $observable): State
     {
-        try {
-            $observable->subscribe(function (Call $call): void {
-                try {
-                    $this->delegateCall($call);
-                } catch (\Throwable $et) {
-                    echo (string)$et;
-                }
-            });
-        } catch (\Throwable $et) {
-            echo (string)$et;
-        }
+        $observable->subscribe(function (Call $call): void {
+            $this->delegateCall($call);
+        });
 
         return $this->state;
     }
 
     private function delegateCall(Call $call): void
     {
-        /*if (count($this->readyCallers) > 0) {
-            $qcHash = array_pop($this->readyCallers);
+        foreach ($this->callerState as $qcHash => $state) {
+            if ($state->getState() === State::BUSY && $state->getState() !== State::DONE) {
+                continue;
+            }
+
             $this->callerStream[$qcHash]->onNext($call);
 
             return;
-        }*/
+        }
 
+        $this->state->onNext(State::BUSY);
+        $this->setUpCaller();
+        $this->delegateCall($call);
+    }
+
+    private function setUpCaller(): void
+    {
         $stream = new Subject();
-        $caller = new QueueCaller($this->kernel);
+        $caller = new FiniteCaller($this->kernel, 13);
         $qcHash = \spl_object_hash($caller);
 
         $this->callers[$qcHash] = $caller;
         $this->callerStream[$qcHash] = $stream;
         $this->callerState[$qcHash] = $caller->call($stream);
-        /** @var DisposableInterface $disposeable */
-        $disposeable = $this->callerState[$qcHash]->filter(function (int $state) {
+        $this->callerState[$qcHash]->filter(function (int $state) {
             return $state === State::WAITING;
-        })->subscribe(function () use (&$disposeable, $stream, $call): void {
-            $stream->onNext($call);
-            $disposeable->dispose();
+        })->subscribe(function () use ($qcHash): void {
+            $waitingCallers = \array_filter($this->callerState, function (State $state) {
+                return $state->getState() === State::WAITING;
+            });
+            $waitingCallersCount = \count($waitingCallers);
+            if ($waitingCallersCount === \count($this->callers)) {
+                $this->state->onNext(State::WAITING);
+            }
+
+            \reset($waitingCallers);
+            for ($i = 1; $i < $waitingCallersCount; $i++) {
+                $this->tearDownCaller(\key($waitingCallers));
+                \next($waitingCallers);
+            }
         });
+    }
+
+    private function tearDownCaller(string $qcHash): void
+    {
+        unset(
+            $this->callers[$qcHash],
+            $this->callerStream[$qcHash],
+            $this->callerState[$qcHash]
+        );
     }
 }
