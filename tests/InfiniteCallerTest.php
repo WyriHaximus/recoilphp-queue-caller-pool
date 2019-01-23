@@ -35,6 +35,11 @@ final class InfiniteCallerTest extends TestCase
             $stream = new Subject();
             $state = $caller->call($stream);
             self::assertSame(State::WAITING, $state->getState());
+            self::assertSame([
+                'callers' => 1,
+                'busy' => 1,
+                'waiting' => 0,
+            ], \iterator_to_array($caller->info()));
 
             for ($i = 'a'; $i !== 'zz'; $i++) {
                 $deferreds[$i] = new Deferred();
@@ -45,6 +50,12 @@ final class InfiniteCallerTest extends TestCase
                 self::assertTrue(\in_array($state->getState(), [State::WAITING, State::BUSY], true), 'set up: ' . $i);
                 yield futurePromise($loop);
             }
+            self::assertSame([
+                'callers' => 54,
+                'busy' => 54,
+                'waiting' => 0,
+            ], \iterator_to_array($caller->info()));
+
             $keys = \array_keys($deferreds);
             foreach ($keys as $i) {
                 $call = $calls[$i];
@@ -58,6 +69,11 @@ final class InfiniteCallerTest extends TestCase
                 unset($deferreds[$i]);
                 self::assertTrue(\in_array($state->getState(), [State::WAITING, State::BUSY], true), 'tear down: ' . $i);
             }
+            self::assertSame([
+                'callers' => 1,
+                'busy' => 1,
+                'waiting' => 0,
+            ], \iterator_to_array($caller->info()));
 
             self::assertSame(State::WAITING, $state->getState());
             self::assertCount(0, $deferreds);

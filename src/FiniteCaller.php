@@ -6,7 +6,7 @@ use Recoil\Kernel;
 use Rx\ObservableInterface;
 use Rx\Subject\Subject;
 
-final class FiniteCaller implements QueueCallerInterface
+final class FiniteCaller implements QueueCallerPoolInterface
 {
     /** @var State */
     private $state;
@@ -74,6 +74,13 @@ final class FiniteCaller implements QueueCallerInterface
         });
 
         return $this->state;
+    }
+
+    public function info(): iterable
+    {
+        yield 'callers' => $this->callersCount;
+        yield 'busy'    => $this->callersBusy;
+        yield 'waiting' => $this->callersCount - $this->callersBusy;
     }
 
     private function delegateCall(Call $call): void

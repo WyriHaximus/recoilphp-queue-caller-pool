@@ -6,7 +6,7 @@ use Recoil\Kernel;
 use Rx\ObservableInterface;
 use Rx\Subject\Subject;
 
-final class InfiniteCaller implements QueueCallerInterface
+final class InfiniteCaller implements QueueCallerPoolInterface
 {
     /** @var Kernel */
     private $kernel;
@@ -42,6 +42,13 @@ final class InfiniteCaller implements QueueCallerInterface
         });
 
         return $this->state;
+    }
+
+    public function info(): iterable
+    {
+        yield 'callers' => \count($this->callers);
+        yield 'busy'    => \count($this->callers);
+        yield 'waiting' => 0; // Always zero because we remove waiting callers from the pool immediately
     }
 
     private function delegateCall(Call $call): void
