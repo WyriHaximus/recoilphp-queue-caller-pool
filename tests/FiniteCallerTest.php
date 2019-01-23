@@ -42,9 +42,11 @@ final class FiniteCallerTest extends TestCase
             ], \iterator_to_array($caller->info()));
 
             $deferreds['a'] = new Deferred();
-            $calls['a'] = new  Call(function ($promise) {
+            $calls['a'] = new  Call(function ($promise, $return) {
                 yield $promise;
-            }, $deferreds['a']->promise());
+
+                return $return;
+            }, $deferreds['a']->promise(), 123);
             $stream->onNext($calls['a']);
             self::assertSame(State::BUSY, $state->getState());
             self::assertSame([
@@ -53,7 +55,7 @@ final class FiniteCallerTest extends TestCase
                 'waiting' => 0,
             ], \iterator_to_array($caller->info()));
 
-            $deferreds['a']->resolve(123);
+            $deferreds['a']->resolve();
             $values['a'] = yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['a']->wait($resolve, $reject);
             });
@@ -65,9 +67,11 @@ final class FiniteCallerTest extends TestCase
             ], \iterator_to_array($caller->info()));
 
             $deferreds['b'] = new Deferred();
-            $calls['b'] = new  Call(function ($promise) {
+            $calls['b'] = new  Call(function ($promise, $return) {
                 yield $promise;
-            }, $deferreds['b']->promise());
+
+                return $return;
+            }, $deferreds['b']->promise(), 456);
             $stream->onNext($calls['b']);
             self::assertSame(State::BUSY, $state->getState());
             self::assertSame([
@@ -77,9 +81,11 @@ final class FiniteCallerTest extends TestCase
             ], \iterator_to_array($caller->info()));
 
             $deferreds['c'] = new Deferred();
-            $calls['c'] = new  Call(function ($promise) {
+            $calls['c'] = new  Call(function ($promise, $return) {
                 yield $promise;
-            }, $deferreds['c']->promise());
+
+                return $return;
+            }, $deferreds['c']->promise(), 789);
             $stream->onNext($calls['c']);
             self::assertSame(State::BUSY, $state->getState());
             self::assertSame([
@@ -88,7 +94,7 @@ final class FiniteCallerTest extends TestCase
                 'waiting' => 0,
             ], \iterator_to_array($caller->info()));
 
-            $deferreds['b']->resolve(456);
+            $deferreds['b']->resolve();
             $values['b'] = yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['b']->wait($resolve, $reject);
             });
@@ -99,7 +105,7 @@ final class FiniteCallerTest extends TestCase
                 'waiting' => 0,
             ], \iterator_to_array($caller->info()));
 
-            $deferreds['c']->resolve(789);
+            $deferreds['c']->resolve();
             $values['c'] = yield new Promise(function ($resolve, $reject) use (&$calls): void {
                 $calls['c']->wait($resolve, $reject);
             });
@@ -117,11 +123,11 @@ final class FiniteCallerTest extends TestCase
 
         self::assertTrue($finished);
 
-        /*self::assertSame([
+        self::assertSame([
             'a' => 123,
             'b' => 456,
             'c' => 789,
-        ], $values);*/
+        ], $values);
 
         //self::assertSame(0, \gc_collect_cycles());
     }

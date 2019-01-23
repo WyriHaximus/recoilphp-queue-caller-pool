@@ -43,9 +43,11 @@ final class InfiniteCallerTest extends TestCase
 
             for ($i = 'a'; $i !== 'zz'; $i++) {
                 $deferreds[$i] = new Deferred();
-                $calls[$i] = new Call(function ($promise) {
+                $calls[$i] = new Call(function ($promise, $return) {
                     yield $promise;
-                }, $deferreds[$i]->promise());
+
+                    return $return;
+                }, $deferreds[$i]->promise(), $i);
                 $stream->onNext($calls[$i]);
                 self::assertTrue(\in_array($state->getState(), [State::WAITING, State::BUSY], true), 'set up: ' . $i);
                 yield futurePromise($loop);
@@ -64,7 +66,7 @@ final class InfiniteCallerTest extends TestCase
                     $call->wait($resolve, $reject);
                     $deferred->resolve($i);
                 }));
-                //self::assertSame($i, $j);
+                self::assertSame($i, $j);
 
                 unset($deferreds[$i]);
                 self::assertTrue(\in_array($state->getState(), [State::WAITING, State::BUSY], true), 'tear down: ' . $i);
